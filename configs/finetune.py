@@ -146,15 +146,17 @@ train_transform = [
 
 # mixed finetune
 train_sets = [
-    ("synthtext150k.poly.part1_train.lmdb", 1.0),
-    ("synthtext150k.poly.part2_train.lmdb", 1.0),
-    ("totaltext.poly_train.lmdb", 2.0),
-    ("icdar13_train.lmdb", 1.0),
-    ("icdar15_train.lmdb", 2.0),
-    ("hiertext_train.lmdb", 1.0),
-    ("textocr_train.lmdb", 2.0),
-    ("textocr.poly_train.lmdb", 2.0),
+    # ("synthtext150k.poly.part1_train.lmdb", 1.0),
+    # ("synthtext150k.poly.part2_train.lmdb", 1.0),
+    # ("totaltext.poly_train.lmdb", 2.0),
+    # ("icdar13_train.lmdb", 1.0),
+    # ("icdar15_train.lmdb", 2.0),
+    # ("hiertext_train.lmdb", 1.0),
+    # ("textocr_train.lmdb", 2.0),
+    # ("textocr.poly_train.lmdb", 2.0),
     # ("ctw1500.poly_train.lmdb", 1.0),
+    ("totaltext_train.lmdb", 1.0),
+    ("vintext_train.lmdb", 1.0),
 ]
 
 datasources = field(datasource=F[LMDBSource](), path=data_path, sources=train_sets)
@@ -212,8 +214,9 @@ valid_transform = [
 ]
 
 valid_sets = [
-    "totaltext.poly_test.lmdb",
-    "icdar15_test.lmdb",
+    "totaltext_test.lmdb",
+    "vintext_val.lmdb",
+    "vintext_test.lmdb",
     # "textocr_val.lmdb",
     # "ctw1500.poly_test.lmdb",
 ]

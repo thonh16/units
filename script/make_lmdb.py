@@ -14,75 +14,38 @@ from PIL import Image
 from pycocotools.coco import COCO
 from tqdm import tqdm
 
-annotation_path = "train_datasets"
+annotation_path = "/content/units/train_datasets/"
 synthtext_vocab = list(
     " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 )
 
 # annotation, img_path pair list
 train_annotation_files = {
-    # mixed
-    "hiertext": ["annotations/hiertext/train.jsonl", "images/hiertext/train"],
-    "textocr": [
-        "annotations/textocr/TextOCR_0.1_train.json",
-        "images/textocr/train_images",
+    "vintext": [
+      annotation_path + "annotations/vintext/train.json", 
+      annotation_path + "images/vintext/train_images"
     ],
-    # poly (ours)
-    "textocr.poly": [
-        "annotations/textocr/TextOCR_0.1_train_poly.json",
-        "images/textocr/train_images",
+    "totaltext": [
+      annotation_path + "annotations/totaltext/train.json", 
+      annotation_path + "images/totaltext/train_images"
     ],
-    # poly (AdelaiDet)
-    "synthtext150k.poly.part1": [
-        "annotations/synthtext150k/syntext1/train_poly.json",
-        "images/synthtext150k/syntext_word_eng/",
-    ],
-    "synthtext150k.poly.part2": [
-        "annotations/synthtext150k/syntext2/train_poly.json",
-        "images/synthtext150k/emcs_imgs/",
-    ],
-    "ctw1500.poly": [
-        "annotations/ctw1500/train_poly.json",
-        "images/ctw1500/ctwtrain_text_image",
-    ],
-    "totaltext.poly": [
-        "annotations/totaltext/train_poly.json",
-        "images/totaltext/train_images",
-    ],
-    # box
-    "icdar13": ["annotations/icdar13/ICDAR2013_FOCUSED_train.json", "images/icdar13"],
-    # quad
-    "icdar15": [
-        "annotations/icdar15/ICDAR2015_Incidental_train.json",
-        "images/icdar15/train",
-    ],
-    "mlt19": ["annotations/mlt19/gt.json", "images/mlt19/"],
 }
 
 val_annotation_files = {
-    "textocr": [
-        "annotations/textocr/TextOCR_0.1_val.json",
-        "images/textocr/train_images",
+    "vintext": [
+        annotation_path + "annotations/vintext/val.json",
+        annotation_path + "images/vintext/val_image",
     ],
-    "hiertext": ["annotations/hiertext/validation.jsonl", "images/hiertext/validation"],
 }
 
 test_annotation_files = {
-    "icdar13": [
-        "annotations/icdar13/ICDAR2013_FOCUSED_test.json",
-        "images/icdar13/test",
+    "vintext": [
+        annotation_path + "annotations/vintext/test.json",
+        annotation_path + "images/vintext/test_image",
     ],
-    "icdar15": [
-        "annotations/icdar15/ICDAR2015_Incidental_test.json",
-        "images/icdar15/test",
-    ],
-    "totaltext.poly": [
-        "annotations/totaltext/test_poly.json",
-        "images/totaltext/test_images",
-    ],
-    "ctw1500.poly": [
-        "annotations/ctw1500/test_poly.json",
-        "images/ctw1500/ctwtest_text_image",
+    "totaltext": [
+        annotation_path + "annotations/totaltext/test.json",
+        annotation_path + "images/totaltext/test_images",
     ],
 }
 
@@ -125,6 +88,8 @@ def to_record(row, dataset):
                         word_id += 1
         filename = str(image_id) + ".jpg"
     elif dataset in [
+        "vintext",
+        "totaltext",
         "icdar13",
         "icdar15",
         "mlt19",
@@ -259,8 +224,41 @@ def process(annotation, root, name, split, target, max_size=2560, n_workers=8):
             refined_annot.append(sample)
 
         row = [(i, r) for i, r in enumerate(refined_annot)]
+    
+    elif name in [
+        "vintext", 
+        "totaltext"
+    ]:
+        eos = len(synthtext_vocab)
+        coco = COCO(annotation)
+        refined_annot = []
+        for img_annot in annot["images"]:
+            img_id = img_annot["id"]
+            ann_ids = coco.getAnnIds(imgIds=img_id)
+            anns = coco.loadAnns(ann_ids)
+            sample = dict()
+            sample["image_width"], sample["image_height"] = (
+                img_annot["width"],
+                img_annot["height"],
+            )
+            sample["image_id"] = img_annot["id"]
+            sample["filename"] = img_annot["file_name"].split("/")[-1]
+            words = []
+            for ann in anns:
+                vertices = ann["bezier_pts"]
+                text = ""
+                for idx in ann["rec"]:
+                    if idx >= eos:
+                        break
+                    text += synthtext_vocab[idx]
+                legible = text != "###" and text != ""
+                words.append({"vertices": vertices, "text": text, "legible": legible})
+            sample["words"] = words
+            refined_annot.append(sample)
 
-    elif name == "hiertext":
+        row = [(i, r) for i, r in enumerate(refined_annot)]
+
+    elif name in ["hiertext"]:
         row = [(i, r) for i, r in enumerate(annot["annotations"])]
 
     elif name in ["textocr", "textocr.poly"]:
